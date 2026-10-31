@@ -1,0 +1,6 @@
+{
+  "name": "Edge Surf 3D - 經典離線衝浪與雪山冒險",
+  "description": "經典微軟 Edge 離線衝浪遊戲 3D 復刻版！支援多視角切換、右上角即時雷達小地圖追蹤海怪與雪人、跳台特技、衝刺道具與極限逃生。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
