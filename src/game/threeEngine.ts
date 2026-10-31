@@ -324,18 +324,18 @@ export class SurfGameEngine {
       mat.needsUpdate = true;
     });
 
-    // Update background & fog
-    const bgColor = isSnow ? 0xdfe6e9 : 0x0288d1;
+    // Update background & fog with high-contrast alpine sky for snow
+    const bgColor = isSnow ? 0x608aa8 : 0x0288d1;
     this.scene.background = new THREE.Color(bgColor);
     if (this.scene.fog instanceof THREE.FogExp2) {
       this.scene.fog.color.setHex(bgColor);
-      this.scene.fog.density = isSnow ? 0.009 : 0.008;
+      this.scene.fog.density = isSnow ? 0.0075 : 0.008;
     }
 
     // Update hemisphere lighting
     if (isSnow) {
-      this.hemiLight.color.setHex(0xf5f6fa);
-      this.hemiLight.groundColor.setHex(0x74b9ff);
+      this.hemiLight.color.setHex(0xe8f0f8);
+      this.hemiLight.groundColor.setHex(0x54728c);
     } else {
       this.hemiLight.color.setHex(0x81ecec);
       this.hemiLight.groundColor.setHex(0x0984e3);
@@ -449,6 +449,30 @@ export class SurfGameEngine {
       this.steeringInput = 0;
       this.isBoosting = false;
     });
+
+    // Pointer / mouse drag steering for smooth browser and mobile play
+    let isPointerDown = false;
+    let startX = 0;
+
+    this.container.addEventListener('pointerdown', (e) => {
+      isPointerDown = true;
+      startX = e.clientX;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isPointerDown) return;
+      const dx = e.clientX - startX;
+      // Proportional steering from drag offset
+      const sensitivity = 0.012;
+      this.steeringInput = Math.max(-1, Math.min(1, dx * sensitivity));
+    });
+
+    const pointerEnd = () => {
+      isPointerDown = false;
+      this.steeringInput = 0;
+    };
+    window.addEventListener('pointerup', pointerEnd);
+    window.addEventListener('pointercancel', pointerEnd);
 
     const onResize = () => {
       if (!this.container || !this.renderer || !this.camera) return;
