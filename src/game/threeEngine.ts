@@ -227,23 +227,24 @@ export class SurfGameEngine {
     this.waterTexture = createWaterFoamTexture();
     this.snowTexture = createSnowTexture();
 
-    // We tile 3 large continuous terrain segments along Z for seamless scrolling
-    const segmentLength = 160;
-    const terrainWidth = 120;
-    const geom = new THREE.PlaneGeometry(terrainWidth, segmentLength, 32, 32);
+    // 3x3 infinite terrain tile grid (140x140 each, covering 420x420 around player)
+    const tileSize = 140;
+    const geom = new THREE.PlaneGeometry(tileSize, tileSize, 16, 16);
     geom.rotateX(-Math.PI / 2);
 
-    for (let i = 0; i < 3; i++) {
-      const mat = new THREE.MeshStandardMaterial({
-        map: this.waterTexture,
-        roughness: 0.15,
-        metalness: 0.25,
-      });
-      const plane = new THREE.Mesh(geom, mat);
-      plane.receiveShadow = true;
-      plane.position.set(0, 0, -i * segmentLength);
-      this.terrainPlanes.push(plane);
-      this.terrainGroup.add(plane);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const mat = new THREE.MeshStandardMaterial({
+          map: this.waterTexture,
+          roughness: 0.15,
+          metalness: 0.25,
+        });
+        const plane = new THREE.Mesh(geom, mat);
+        plane.receiveShadow = true;
+        plane.position.set(dx * tileSize, 0, dz * tileSize);
+        this.terrainPlanes.push(plane);
+        this.terrainGroup.add(plane);
+      }
     }
   }
 
@@ -314,7 +315,7 @@ export class SurfGameEngine {
 
     // Update terrain texture & materials
     const activeTex = isSnow ? this.snowTexture : this.waterTexture;
-    activeTex.repeat.set(isSnow ? 8 : 6, isSnow ? 14 : 10);
+    activeTex.repeat.set(isSnow ? 8 : 7, isSnow ? 8 : 7);
 
     this.terrainPlanes.forEach(plane => {
       const mat = plane.material as THREE.MeshStandardMaterial;
@@ -499,11 +500,10 @@ export class SurfGameEngine {
       steer = this.steeringInput;
     }
 
-    // Smooth steering response
-    const steerSpeed = 22;
+    // Smooth steering response with infinite lateral freedom
+    const steerSpeed = 24;
     this.playerX += steer * steerSpeed * dt;
-    // Bounds clamping (-22 to 22)
-    this.playerX = Math.max(-22, Math.min(22, this.playerX));
+    // Infinite lateral movement: No boundary clamping!
 
     // Target tilt roll when carving
     const targetTilt = -steer * 0.45;
@@ -590,16 +590,27 @@ export class SurfGameEngine {
   }
 
   private updateTerrain() {
-    // Continuously cycle the 3 terrain segments ahead
-    const segmentLength = 160;
-    this.terrainPlanes.forEach(plane => {
-      if (plane.position.z > this.playerZ + segmentLength * 0.7) {
-        plane.position.z -= segmentLength * 3;
-      }
-    });
+    // Dynamically wrap the 3x3 terrain grid around the player's quantized grid position in both X and Z
+    const tileSize = 140;
+    const gridX = Math.round(this.playerX / tileSize);
+    const gridZ = Math.round(this.playerZ / tileSize);
 
-    // Move Key Light along with player
-    this.keyLight.position.z = this.playerZ + 15;
+    let idx = 0;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (this.terrainPlanes[idx]) {
+          this.terrainPlanes[idx].position.set(
+            (gridX + dx) * tileSize,
+            0,
+            (gridZ + dz) * tileSize
+          );
+        }
+        idx++;
+      }
+    }
+
+    // Move Key Light & shadow caster centered around player
+    this.keyLight.position.set(this.playerX + 25, 45, this.playerZ + 15);
     this.keyLight.target.position.set(this.playerX, 0, this.playerZ - 10);
     this.keyLight.target.updateMatrixWorld();
   }
@@ -611,11 +622,11 @@ export class SurfGameEngine {
     while (this.nextObstacleZ > spawnHorizon) {
       this.nextObstacleZ -= 18 + Math.random() * 12;
 
-      // 1. Roll for Jump Ramp
+      // 1. Roll for Jump Ramp - dynamically generated around player's current X!
       if (Math.random() < 0.16) {
         const rampType = Math.random() < 0.3 ? 'MEGA_RAMP' : 'STANDARD_RAMP';
         const rampMesh = createRampMesh(rampType, isSnow);
-        const rampX = (Math.random() - 0.5) * 28;
+        const rampX = this.playerX + (Math.random() - 0.5) * 44;
         rampMesh.position.set(rampX, 0, this.nextObstacleZ);
         this.scene.add(rampMesh);
 
@@ -633,12 +644,12 @@ export class SurfGameEngine {
         });
       }
 
-      // 2. Roll for Collectible Item (Star, Boost, Heart)
+      // 2. Roll for Collectible Item (Star, Boost, Heart) - dynamically generated around player's current X!
       if (Math.random() < 0.45) {
         const rand = Math.random();
         const itemType = rand < 0.65 ? 'STAR' : rand < 0.9 ? 'BOOST' : 'HEART';
         const itemMesh = createItemMesh(itemType);
-        const itemX = (Math.random() - 0.5) * 32;
+        const itemX = this.playerX + (Math.random() - 0.5) * 48;
         itemMesh.position.set(itemX, 0.9, this.nextObstacleZ + 6);
         this.scene.add(itemMesh);
 
@@ -656,7 +667,7 @@ export class SurfGameEngine {
         });
       }
 
-      // 3. Roll for 1 to 3 Obstacles
+      // 3. Roll for 1 to 3 Obstacles - dynamically generated around player's current X!
       const count = Math.floor(1 + Math.random() * 2.5);
       const types: ObstacleType[] = isSnow 
         ? ['PINE_TREE', 'SNOW_ROCK', 'SLALOM_FLAG', 'ICE_CHASM']
@@ -665,7 +676,7 @@ export class SurfGameEngine {
       for (let c = 0; c < count; c++) {
         const obsType = types[Math.floor(Math.random() * types.length)];
         const mesh = createObstacleMesh(obsType);
-        const ox = (Math.random() - 0.5) * 36;
+        const ox = this.playerX + (Math.random() - 0.5) * 54;
         const oz = this.nextObstacleZ + (Math.random() - 0.5) * 8;
         mesh.position.set(ox, 0, oz);
         mesh.rotation.y = Math.random() * Math.PI * 2;
@@ -687,10 +698,13 @@ export class SurfGameEngine {
       }
     }
 
-    // Cleanup objects behind player (Z > playerZ + 40)
+    // Dynamic Purge / Resource Saving:
+    // Remove any obstacle, item, or ramp that is too far behind, too far ahead, OR too far laterally (X)!
     const purgeZ = this.playerZ + 45;
+    const maxLateralDist = 65; // strictly purge objects outside current radar & camera horizon to save resources
+
     this.obstacles = this.obstacles.filter(o => {
-      if (o.data.z > purgeZ) {
+      if (o.data.z > purgeZ || Math.abs(o.data.x - this.playerX) > maxLateralDist) {
         this.scene.remove(o.mesh);
         return false;
       }
@@ -698,7 +712,7 @@ export class SurfGameEngine {
     });
 
     this.items = this.items.filter(i => {
-      if (i.data.z > purgeZ || i.data.collected) {
+      if (i.data.z > purgeZ || i.data.collected || Math.abs(i.data.x - this.playerX) > maxLateralDist) {
         this.scene.remove(i.mesh);
         return false;
       }
@@ -706,7 +720,7 @@ export class SurfGameEngine {
     });
 
     this.ramps = this.ramps.filter(r => {
-      if (r.data.z > purgeZ) {
+      if (r.data.z > purgeZ || Math.abs(r.data.x - this.playerX) > maxLateralDist) {
         this.scene.remove(r.mesh);
         return false;
       }
@@ -928,15 +942,15 @@ export class SurfGameEngine {
 
     switch (this.currentCameraMode) {
       case 'CHASE': {
-        // Dynamic over-the-shoulder follow cam
-        _camPosTarget.set(px * 0.45, py + 4.6, pz + 10.5);
+        // Dynamic over-the-shoulder follow cam centering on current playerX
+        _camPosTarget.set(px + this.playerTilt * 1.5, py + 4.6, pz + 10.5);
         _camTarget.set(px, py + 1.2, pz - 12);
         this.camera.fov = this.isBoosting ? 64 : 58;
         break;
       }
       case 'RETRO_TOP': {
-        // Vintage isometric Edge Surf angle
-        _camPosTarget.set(px * 0.25, 17.5, pz + 15.0);
+        // Vintage isometric Edge Surf angle centering on current playerX
+        _camPosTarget.set(px, 17.5, pz + 15.0);
         _camTarget.set(px, 0.5, pz - 8.0);
         this.camera.fov = 54;
         break;

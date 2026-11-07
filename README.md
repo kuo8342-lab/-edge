@@ -4,7 +4,7 @@
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8?style=flat&logo=tailwindcss)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 經典微軟 Edge 瀏覽器離線卷軸衝浪遊戲（`edge://surf`）的 **3D 現代化復刻升級版**！具備多種自由切換的 3D 視角、右上角即時雷達小地圖監控海怪與雪人、跳台特技、氮氣衝刺以及跨裝置觸控操作。
 
@@ -18,6 +18,11 @@
 ---
 
 ## ✨ 遊戲特色亮點
+
+### 0. 🧭 無限左右自由移動 & 動態節能分塊渲染（Open-World Chunking）
+- **真·無限左右地圖**：打破傳統邊界限制，玩家可隨意往左或往右無限衝浪與滑雪，享受無拘無束的廣闊地圖。
+- **走到哪顯示到哪（智慧動態加載）**：障礙物、跳台與道具永遠動態生成於玩家前進方向的視野走廊內。
+- **嚴格物件回收（極致節省資源）**：離開雷達範圍（橫向 > 65m 或身後 > 40m）的障礙物與跳台會被立即清理釋放，全場嚴格維持約 20~35 個 3D 輕量網格，保證 60 FPS 絲滑運作且永不卡頓或消耗過量記憶體。
 
 ### 1. 🎥 四種 3D 視角自由切換（快捷鍵 `V`）
 - **第三人稱追尾（Chase View）**：跟隨衝浪板左右動態傾角，加速時附帶視野動態拉伸（FOV Speed Effect）。
@@ -142,4 +147,4 @@ npm run lint
 ---
 
 ## 📜 授權協議
-本專案採用 [Apache-2.0 License](LICENSE) 授權。
+本專案採用 [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0) 授權，詳細授權條款亦可參閱本儲存庫中的 [LICENSE](./LICENSE) 檔案。
